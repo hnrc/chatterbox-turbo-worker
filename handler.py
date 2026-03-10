@@ -42,7 +42,7 @@ def load_model():
         token=False,
         allow_patterns=["*.safetensors", "*.json", "*.txt", "*.pt", "*.model"],
     )
-    tts_model = ChatterboxTurboTTS.from_local(local_path, device=device)
+    tts_model = ChatterboxTurboTTS.from_local(local_path, device=device).float()
 
     print("[Handler] Model loaded successfully")
     return tts_model
