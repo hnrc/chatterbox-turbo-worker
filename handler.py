@@ -31,11 +31,18 @@ def load_model():
     print("[Handler] Loading Chatterbox Turbo model...")
 
     from chatterbox.tts_turbo import ChatterboxTurboTTS
+    from huggingface_hub import snapshot_download
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[Handler] Using device: {device}")
 
-    tts_model = ChatterboxTurboTTS.from_pretrained(device=device)
+    # Download with token=False (model is public, avoids auth requirement)
+    local_path = snapshot_download(
+        repo_id="ResembleAI/chatterbox-turbo",
+        token=False,
+        allow_patterns=["*.safetensors", "*.json", "*.txt", "*.pt", "*.model"],
+    )
+    tts_model = ChatterboxTurboTTS.from_local(local_path, device=device)
 
     print("[Handler] Model loaded successfully")
     return tts_model
