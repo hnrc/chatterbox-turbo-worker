@@ -1,5 +1,5 @@
-# Chatterbox TTS Worker for RunPod Serverless
-# Text-to-Speech with voice cloning and emotion control
+# Chatterbox Turbo Worker for RunPod Serverless
+# Text-to-Speech with voice cloning and paralinguistic tags
 #
 # Based on: https://github.com/geronimi73/runpod_chatterbox
 
@@ -30,7 +30,6 @@ RUN pip install --no-cache-dir \
     huggingface_hub \
     safetensors \
     transformers \
-    diffusers \
     einops \
     soundfile \
     scipy \
@@ -44,7 +43,7 @@ RUN pip install --no-cache-dir runpod
 COPY handler.py /app/handler.py
 
 # Pre-download model during build
-RUN python -c "from chatterbox.tts import ChatterboxTTS; print('Downloading Chatterbox model...'); model = ChatterboxTTS.from_pretrained(device='cpu'); print('Model downloaded successfully')"
+RUN python -c "from chatterbox.tts_turbo import ChatterboxTurboTTS; print('Downloading Chatterbox Turbo model...'); model = ChatterboxTurboTTS.from_pretrained(device='cpu'); print('Model downloaded successfully')"
 
 # Start handler
 CMD ["python", "-u", "/app/handler.py"]

@@ -1,6 +1,6 @@
 """
-RunPod Serverless Handler for Chatterbox TTS
-Text-to-Speech with voice cloning and emotion control
+RunPod Serverless Handler for Chatterbox Turbo
+Text-to-Speech with voice cloning and paralinguistic tags
 
 Based on: https://github.com/geronimi73/runpod_chatterbox
 """
@@ -22,20 +22,20 @@ tts_model = None
 
 
 def load_model():
-    """Load Chatterbox TTS model."""
+    """Load Chatterbox Turbo model."""
     global tts_model
 
     if tts_model is not None:
         return tts_model
 
-    print("[Handler] Loading Chatterbox TTS model...")
+    print("[Handler] Loading Chatterbox Turbo model...")
 
-    from chatterbox.tts import ChatterboxTTS
+    from chatterbox.tts_turbo import ChatterboxTurboTTS
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[Handler] Using device: {device}")
 
-    tts_model = ChatterboxTTS.from_pretrained(device=device)
+    tts_model = ChatterboxTurboTTS.from_pretrained(device=device)
 
     print("[Handler] Model loaded successfully")
     return tts_model
@@ -104,7 +104,7 @@ def handler(job: dict) -> dict:
     if job_input.get("health_check"):
         return {
             "status": "healthy",
-            "message": "Chatterbox TTS handler ready",
+            "message": "Chatterbox Turbo handler ready",
             "model_loaded": tts_model is not None
         }
 
@@ -122,9 +122,15 @@ def handler(job: dict) -> dict:
 
     # Optional: generation parameters
     temperature = job_input.get("temperature", 0.7)
-    exaggeration = job_input.get("exaggeration", 1.0)
     speed = job_input.get("speed", 1.0)
-    cfg_weight = job_input.get("cfg_weight", 0.5)
+    min_p = job_input.get("min_p", 0.05)
+    top_p = job_input.get("top_p", 0.8)
+    top_k = job_input.get("top_k", 50)
+    repetition_penalty = job_input.get("repetition_penalty", 1.1)
+
+    # Backward compat: accept but ignore old params
+    exaggeration = job_input.get("exaggeration")
+    cfg_weight = job_input.get("cfg_weight")
 
     # Parse emotion from text if not provided
     clean_text, text_emotion = parse_emotion_tags(text)
@@ -150,14 +156,20 @@ def handler(job: dict) -> dict:
         print(f"[Handler] Generating speech for: {text[:50]}...")
         print(f"[Handler] Emotion: {emotion}, Temp: {temperature}, Speed: {speed}")
 
+        turbo_params = dict(
+            temperature=temperature,
+            min_p=min_p,
+            top_p=top_p,
+            top_k=int(top_k),
+            repetition_penalty=repetition_penalty,
+        )
+
         if ref_audio_path:
             # Voice cloning mode
             audio = model.generate(
                 text=text,
                 audio_prompt_path=ref_audio_path,
-                temperature=temperature,
-                exaggeration=exaggeration,
-                cfg_weight=cfg_weight,
+                **turbo_params,
             )
             # Clean up temp file
             os.unlink(ref_audio_path)
@@ -165,9 +177,7 @@ def handler(job: dict) -> dict:
             # Default voice mode
             audio = model.generate(
                 text=text,
-                temperature=temperature,
-                exaggeration=exaggeration,
-                cfg_weight=cfg_weight,
+                **turbo_params,
             )
 
         # Apply speed adjustment if not 1.0

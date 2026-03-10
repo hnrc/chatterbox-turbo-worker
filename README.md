@@ -1,14 +1,12 @@
-# Chatterbox TTS Wellness Worker
+# Chatterbox Turbo TTS Worker
 
-[![RunPod](https://api.runpod.io/badge/profzeller/chatterbox-wellness-worker)](https://console.runpod.io/hub/profzeller/chatterbox-wellness-worker)
-
-RunPod Serverless worker for Chatterbox Text-to-Speech with voice cloning.
+RunPod Serverless worker for Chatterbox Turbo Text-to-Speech with voice cloning.
 
 ## Capabilities
 
-- **Text-to-Speech** - Natural speech synthesis
+- **Text-to-Speech** - Fast, natural speech synthesis (up to 6x real-time)
 - **Voice Cloning** - Clone any voice from a reference audio sample
-- **Emotion Tags** - Control emotion in speech
+- **Paralinguistic Tags** - Native support for `[laugh]`, `[cough]`, `[chuckle]` etc.
 - **Speed Control** - Adjust playback speed
 
 ## Deployment on RunPod
@@ -62,17 +60,17 @@ Or with base64 audio:
 }
 ```
 
-### With Emotion Tags
+### With Paralinguistic Tags
 
 ```json
 {
   "input": {
-    "text": "[happy] I'm so excited to share these wellness tips with you!"
+    "text": "I can't believe it [laugh] that's amazing!"
   }
 }
 ```
 
-Supported emotions: `happy`, `sad`, `angry`, `surprised`, `neutral`, `calm`
+Supported tags: `[laugh]`, `[chuckle]`, `[cough]`, and more — placed inline in text.
 
 ### With Parameters
 
@@ -81,19 +79,21 @@ Supported emotions: `happy`, `sad`, `angry`, `surprised`, `neutral`, `calm`
   "input": {
     "text": "This is a calm meditation guide.",
     "temperature": 0.5,
-    "exaggeration": 0.8,
     "speed": 0.9,
-    "cfg_weight": 0.5
+    "top_p": 0.8,
+    "repetition_penalty": 1.1
   }
 }
 ```
 
 | Parameter | Default | Range | Description |
 |-----------|---------|-------|-------------|
-| `temperature` | 0.7 | 0.0-1.0 | Creativity/variability |
-| `exaggeration` | 1.0 | 0.5-2.0 | Emotion intensity |
+| `temperature` | 0.7 | 0.05-2.0 | Creativity/variability |
 | `speed` | 1.0 | 0.5-2.0 | Playback speed |
-| `cfg_weight` | 0.5 | 0.0-1.0 | Classifier-free guidance |
+| `min_p` | 0.05 | 0.0-1.0 | Minimum probability threshold |
+| `top_p` | 0.8 | 0.0-1.0 | Top-p (nucleus) sampling |
+| `top_k` | 50 | 0-1000 | Top-k sampling |
+| `repetition_penalty` | 1.1 | 1.0-2.0 | Penalizes repetition |
 
 ## Response Format
 
@@ -102,18 +102,9 @@ Supported emotions: `happy`, `sad`, `angry`, `surprised`, `neutral`, `calm`
   "audio_base64": "UklGRi...",
   "sample_rate": 24000,
   "duration_seconds": 3.5,
-  "text": "The synthesized text",
-  "emotion": "happy"
+  "text": "The synthesized text"
 }
 ```
-
-## Cost Estimates
-
-| Task | GPU | Time | Cost |
-|------|-----|------|------|
-| TTS (30 words) | RTX 4090 | ~10s | ~$0.001 |
-| TTS (100 words) | RTX 4090 | ~30s | ~$0.003 |
-| Voice Clone Setup | RTX 4090 | ~5s | ~$0.0005 |
 
 ## Reference Audio Requirements
 
@@ -128,22 +119,10 @@ For best voice cloning results:
 
 ```bash
 # Build
-docker build -t chatterbox-wellness-worker .
+docker build -t chatterbox-turbo-worker .
 
 # Run (requires NVIDIA GPU)
-docker run --gpus all chatterbox-wellness-worker
-```
-
-## Example: Wellness Narration
-
-```json
-{
-  "input": {
-    "text": "[calm] Welcome to today's mindfulness session. Find a comfortable position, close your eyes, and let's begin our journey to inner peace.",
-    "temperature": 0.5,
-    "speed": 0.85
-  }
-}
+docker run --gpus all chatterbox-turbo-worker
 ```
 
 ## License

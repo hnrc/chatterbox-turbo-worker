@@ -1,6 +1,6 @@
 {
-  "title": "Chatterbox Wellness TTS",
-  "description": "Text-to-Speech worker using Chatterbox with emotion control and voice cloning for wellness content narration",
+  "title": "Chatterbox Turbo TTS",
+  "description": "Text-to-Speech worker using Chatterbox Turbo with voice cloning and paralinguistic tags",
   "type": "serverless",
   "category": "audio",
   "config": {
