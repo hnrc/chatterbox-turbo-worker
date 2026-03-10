@@ -42,7 +42,18 @@ def load_model():
         token=False,
         allow_patterns=["*.safetensors", "*.json", "*.txt", "*.pt", "*.model"],
     )
-    tts_model = ChatterboxTurboTTS.from_local(local_path, device=device).float()
+    tts_model = ChatterboxTurboTTS.from_local(local_path, device=device)
+
+    # Fix dtype mismatch: built-in conds may contain float64 tensors
+    # (from torch.from_numpy) while model weights are float32
+    if tts_model.conds is not None:
+        for field in ['speaker_emb', 'cond_prompt_speech_tokens', 'cond_prompt_speech_emb', 'emotion_adv']:
+            v = getattr(tts_model.conds.t3, field, None)
+            if v is not None and torch.is_tensor(v) and v.is_floating_point():
+                setattr(tts_model.conds.t3, field, v.float())
+        for k, v in tts_model.conds.gen.items():
+            if torch.is_tensor(v) and v.is_floating_point():
+                tts_model.conds.gen[k] = v.float()
 
     print("[Handler] Model loaded successfully")
     return tts_model
