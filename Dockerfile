@@ -45,7 +45,12 @@ RUN pip install --no-cache-dir runpod
 COPY handler.py /app/handler.py
 
 # Pre-download model during build
-RUN python -c "from chatterbox.tts_turbo import ChatterboxTurboTTS; print('Downloading Chatterbox Turbo model...'); model = ChatterboxTurboTTS.from_pretrained(device='cpu'); print('Model downloaded successfully')"
+# The model is public but chatterbox defaults to token=True, so we download directly
+RUN python -c "\
+from huggingface_hub import snapshot_download; \
+print('Downloading Chatterbox Turbo model...'); \
+snapshot_download(repo_id='ResembleAI/chatterbox-turbo', token=False, allow_patterns=['*.safetensors', '*.json', '*.txt', '*.pt', '*.model']); \
+print('Model downloaded successfully')"
 
 # Start handler
 CMD ["python", "-u", "/app/handler.py"]
