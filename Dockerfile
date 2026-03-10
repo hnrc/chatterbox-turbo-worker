@@ -34,7 +34,9 @@ RUN pip install --no-cache-dir \
     soundfile \
     scipy \
     omegaconf \
-    pyloudnorm
+    pyloudnorm \
+    torchaudio \
+    diffusers
 
 # Install RunPod SDK
 RUN pip install --no-cache-dir runpod
