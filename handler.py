@@ -19,6 +19,39 @@ import numpy as np
 
 # Global model instance (loaded once per worker)
 tts_model = None
+_orig_prepare = None
+
+
+def _patch_prepare_conditionals():
+    """Monkey-patch prepare_conditionals to cast all outputs to float32.
+
+    librosa.load returns float64 numpy → torch.from_numpy preserves float64
+    → dtype mismatch with float32 model weights during inference.
+    This patch catches every call (built-in conds AND per-request voice cloning).
+    """
+    global _orig_prepare
+    from chatterbox.tts_turbo import ChatterboxTurboTTS
+
+    if _orig_prepare is not None:
+        return  # already patched
+
+    _orig_prepare = ChatterboxTurboTTS.prepare_conditionals
+
+    def _patched(self, *args, **kwargs):
+        conds = _orig_prepare(self, *args, **kwargs)
+        if hasattr(conds, 't3'):
+            for field in vars(conds.t3):
+                v = getattr(conds.t3, field, None)
+                if torch.is_tensor(v) and v.is_floating_point():
+                    setattr(conds.t3, field, v.float())
+        if hasattr(conds, 'gen') and isinstance(conds.gen, dict):
+            for k, v in conds.gen.items():
+                if torch.is_tensor(v) and v.is_floating_point():
+                    conds.gen[k] = v.float()
+        return conds
+
+    ChatterboxTurboTTS.prepare_conditionals = _patched
+    print("[Handler] Patched prepare_conditionals for float32 dtype consistency")
 
 
 def load_model():
@@ -33,6 +66,8 @@ def load_model():
     from chatterbox.tts_turbo import ChatterboxTurboTTS
     from huggingface_hub import snapshot_download
 
+    _patch_prepare_conditionals()
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[Handler] Using device: {device}")
 
@@ -43,17 +78,6 @@ def load_model():
         allow_patterns=["*.safetensors", "*.json", "*.txt", "*.pt", "*.model"],
     )
     tts_model = ChatterboxTurboTTS.from_local(local_path, device=device)
-
-    # Fix dtype mismatch: built-in conds may contain float64 tensors
-    # (from torch.from_numpy) while model weights are float32
-    if tts_model.conds is not None:
-        for field in ['speaker_emb', 'cond_prompt_speech_tokens', 'cond_prompt_speech_emb', 'emotion_adv']:
-            v = getattr(tts_model.conds.t3, field, None)
-            if v is not None and torch.is_tensor(v) and v.is_floating_point():
-                setattr(tts_model.conds.t3, field, v.float())
-        for k, v in tts_model.conds.gen.items():
-            if torch.is_tensor(v) and v.is_floating_point():
-                tts_model.conds.gen[k] = v.float()
 
     print("[Handler] Model loaded successfully")
     return tts_model
